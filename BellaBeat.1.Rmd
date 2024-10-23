@@ -1,0 +1,498 @@
+---
+title: "BellaBeat Case Study Google Data Analytics"
+author: "Lucas Eloy Fernandez"
+date: "2024-07-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## BellaBeat Case Study with "R" Google Data Analytics 
+ 
+##●	1°PREGUNTAR (Ask)
+Resumen de la tarea empresarial
+La tarea empresarial para este caso es encontrar tendencias en el uso de dispositivos inteligentes que se puedan aplicar a los usuarios de Bellabeat y usar estas tendencias para mejorar la estrategia de marketing de la empresa.
+ Urška Sršen Cofundadora y directora creativa de Bellabeat y Sando Mur, Matemático y cofundador de Bellabeat, miembro del equipo ejecutivo de Bellabeat (los Stakeholders) nos encargan un análisis y entregar recomendaciones para mejorar la estrategia de marketing 
+
+.Usar la informacion para tomar deciciones basadas.
+.Categorizar la informacion en diferentes grupos con aspectos en comun.
+.Identificar informacion diferente a lo "normal" que estamos analizando.
+.Descubrir conexiones y patrones.
+.Realizamos la practica de "SMART" questions, (Specific, Measurables, Action-oriented, Relevant, Time bound)
+
+. "Tarea empresarial":
+1.	¿Cuáles son algunas tendencias de uso de los dispositivos inteligentes?
+2.	¿Cómo se podrían aplicar estas tendencias a los clientes de Bellabeat?
+3.	¿Cómo podrían ayudar estas tendencias a influir en la estrategia de marketing de Bellabeat?
+
+
+##●	2° PREPARAR (Prepare)
+
+.Fuente de Datos de seguimiento de actividad física de Fitbit (CC0: Dominio público, conjunto de datos disponibles a través de Mobius): Este conjunto de datos de Kaggle contiene el seguimiento de la actividad física personal en treinta usuarios de Fitbit. Treinta usuarios elegibles de Fitbit prestaron su consentimiento para el envío de datos personales de seguimiento que incluyen rendimiento de la actividad física en minutos, ritmo cardíaco y monitoreo del sueño. Incluye información sobre la actividad diaria, pasos y ritmo cardíaco que se puede usar para explorar los hábitos de los usuarios.
+
+Los datos se encuentran disponibles en Kaggle, agrupados en 2 carpetas que tienen información colectada en 2 períodos de tiempo, con formato MM/DD/AAAA, almacenados en archivos .csv (comma-separated value) y están agrupados en 2 sets según fecha:
+
+Fitabase Data 3.12.16-4.11.16: datos almacenados desde el 12 de marzo de 2016 al 11 de abril de 2016, que contiene 11 archivos .csv:
+
+dailyActivity_merged
+heartrate_seconds_merged
+hourlyCalories_merged
+hourlyIntensities_merged
+hourlySteps_merged
+minuteCaloriesNarrow_merged
+minuteIntensitiesNarrow_merged
+minuteMETsNarrow_merged
+minuteSleep_merged
+minuteStepsNarrow_merged
+weightLogInfo_merged
+
+Fitabase Data 4.12.16-5.12.16: datos almacenados desde el 12 de abril de 2016 al 12 de mayo de 2016, que contiene 18 archivos .csv, 7 más que el primer set, y éstos son:
+
+dailyCalories_merged
+dailyIntensities_merged
+dailySteps_merged
+minuteCaloriesWide_merged
+minuteIntensitiesWide_merged
+minuteStepsWide_merged
+sleepDay_merged
+
+Análisis ROCCC
+
+* Reliable (Confiabilidad)
+Los datos no son del todo confiables ya que no se dispone de la misma cantidad de archivos en los 2 conjuntos de datos, el primer conjunto tiene 11 archivos,  respecto al segundo 18 archivos.
+Sample Size o muestra de testeo es pequeña (24 usuarios)
+La cantidad de usuarios, analizados por su ID, es pequeña y varía en los distintos archivos
+Comparando los datos del archivo dailyActivity_merged, ambos sets muestran 33 usuarios.
+En el archivo sleepDay_merged, ambos sets muestran 24 usuarios.
+En el archivo weightLogInfo_merged, en el primer set hay 8 usuarios y en el segundo set hay 11.
+El conjunto de datos tiene Sample Bias o "inclinacion de muestras", no podemos asegurar que los datos son, efectivamente, de mujeres.
+El período de medición es acotado, sólo hay datos para 2 meses.
+Entonces, debido a esto, se puede concluir que hay un sesgo en los datos ya que la muestra es pequeña, el tiempo de medición es corto, no consideran variación estacionales o la posibilidad de analizar épocas de mayor uso de los productos en el año.
+
+* Original (Original)
+No son originales, pertenecen a una fuente de terceros (no de Bellabeat), en este caso, de Amazon Mechanical Turk, subidos a Kaggle por el usuario Möbius.
+
+* Comprehensive (integral)
+No son del todo integrales ya que tiene incongruencias en los formatos de algunas entradas. Al abrir los archivos .csv se puede notar que hay fechas que aparecen como strings por lo que no son reconocidas como fechas (date).
+
+* Current (Actuales)
+Los datos no son actuales ya que fueron obtenidos en 2016 y estamos en el año 2024, ya tienen 8 años de antigüedad.
+
+* Cited (citado)
+Se menciona que el origen de los datos viene de Amazon Mechanical Turk.
+
+Privacidad de los usuarios, en la descripción del texto se informa que los usuarios dieron su consentimiento.
+
+##●	3 PROCESAR (Process data)
+El procesamiento de datos voy a hacerlo en R.
+1. Instalamos los paquetes y abrimos las librerias:
+
+ tidyverse
+ here
+ skimr
+ janitor
+ lubridate
+ ggpubr
+ ggrepel
+
+```{r}
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages("dplyr")
+install.packages("ggplot2")
+install.packages("tidyr")
+install.packages("here")
+install.packages("skimr")
+install.packages("janitor")
+install.packages("ggpubr")
+install.packages("ggrepel")
+
+library(tidyverse)
+library(lubridate)
+library(dbplyr)
+library(ggplot2)
+library(tidyr)
+library(here)
+library(skimr)
+library(janitor)
+library(ggpubr)
+library(ggrepel)
+
+```
+## 
+2 Importar los DataSets
+Importamos los DataSets para poder trabajar con ellos. Vamos a realizar las siguientes acciones:VIEW, CLEAN, FORMAT, y ORGANIZE.
+
+dailyActivity_merged
+sleepDay-merged
+HourlySteps_merged
+dailyCalories_merged
+dailyIntensities_merged
+
+Debido a la poca informacion que contienen WeightLogInfo_merged (8 Users) y heartRate_merged (7 users) no la vamos a utilizar.
+
+```{r}
+daily_activity <- read.csv("C:/Users/lucas/Desktop/Programacion 2019/Data Analitycs Google/8 Data Analysis Portfolios.Case studies/Study Case 2 BellaBeat/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+daily_sleep <- read.csv("C:/Users/lucas/Desktop/Programacion 2019/Data Analitycs Google/8 Data Analysis Portfolios.Case studies/Study Case 2 BellaBeat/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/sleepDay_merged.csv")
+hourly_steps <- read.csv("C:/Users/lucas/Desktop/Programacion 2019/Data Analitycs Google/8 Data Analysis Portfolios.Case studies/Study Case 2 BellaBeat/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/hourlySteps_merged.csv")
+daily_intensities <- read.csv("C:/Users/lucas/Desktop/Programacion 2019/Data Analitycs Google/8 Data Analysis Portfolios.Case studies/Study Case 2 BellaBeat/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyIntensities_merged.csv")
+daily_calories <- read.csv("C:/Users/lucas/Desktop/Programacion 2019/Data Analitycs Google/8 Data Analysis Portfolios.Case studies/Study Case 2 BellaBeat/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyCalories_merged.csv")
+
+glimpse(daily_activity)
+glimpse(daily_sleep)
+glimpse(hourly_steps) 
+glimpse(daily_calories)
+glimpse(daily_intensities)
+
+```
+## 
+3 Limpieza y Formateo de la informacion.
+Buscamos errores o inconsistencias en los data sets
+Verificamos que los data sets tengan la misma cantidad de usuarios.
+
+```{r}
+n_unique(daily_activity$Id)
+n_unique(daily_sleep$Id)
+n_unique(hourly_steps$Id)
+n_unique(daily_calories$Id)
+n_unique(daily_intensities$Id)
+```
+## 
+4 Buscamos Duplicados
+```{r}
+sum(duplicated(daily_activity))
+sum(duplicated(daily_sleep))
+sum(duplicated(hourly_steps))
+sum(duplicated(daily_calories))
+sum(duplicated(daily_intensities))
+
+```
+## 
+5 Borramos los Duplicados y los N/A
+
+```{r}
+daily_activity <- daily_activity %>%
+  distinct() %>%
+  drop_na()
+
+daily_sleep <- daily_sleep %>%
+  distinct() %>%
+  drop_na()
+
+hourly_steps <- hourly_steps %>%
+  distinct() %>%
+  drop_na()
+
+daily_calories <- daily_calories %>%
+  distinct() %>%
+  drop_na()
+
+daily_intensities <- daily_intensities %>%
+  distinct() %>%
+  drop_na()
+
+```
+## 
+Verificamos que los duplicados y los N/A fueron borrados con exito
+
+```{r}
+sum(duplicated(daily_activity))
+sum(duplicated(daily_sleep))
+sum(duplicated(hourly_steps))
+sum(duplicated(daily_calories))
+sum(duplicated(daily_intensities))
+```
+## 
+6 Limpiamos y re nombramos columnas, asi nos aseguramos que todos los encabezados de las columnas sean iguales para cuando combinemos los datasets no haya errores en compatibilidad
+
+```{r}
+clean_names(daily_activity)
+daily_activity<- rename_with(daily_activity, tolower)
+clean_names(daily_sleep)
+daily_sleep <- rename_with(daily_sleep, tolower)
+clean_names(hourly_steps)
+hourly_steps <- rename_with(hourly_steps, tolower)
+clean_names(daily_calories)
+daily_calories <- rename_with(daily_calories, tolower)
+clean_names(daily_intensities)
+daily_intensities <- rename_with(daily_intensities, tolower)
+```
+##
+7 Consistencia en los datos Date/Time, es importante tener los mismos formatos de Date/time en los diferentes data sets asi cuando combinemos no sucedan errores. Pasamos del formato Date/time a solo Date. Encontramos variables de fechas en formato "chr" lo cual debemos cambiar a "date" 
+
+```{r}
+daily_activity$activitydate <- as.Date(daily_activity$activitydate, format="%m/%d/%Y", tz=Sys.timezone())
+
+daily_intensities$activityday <-as.Date(daily_intensities$activityday, format="%m/%d/%Y", tz=Sys.timezone())
+
+daily_sleep$sleepday <- parse_date_time(daily_sleep$sleepday, "%m-%d-%Y %I:%M:%S")
+
+hourly_steps$activityhour <- parse_date_time(hourly_steps$activityhour, "%m-%d-%Y %I:%M:%S %p", tz=Sys.timezone())
+
+
+# Verificamos que todos nuestros datos esten en el formato date o date/time
+glimpse(daily_activity)
+glimpse(daily_intensities)
+glimpse(daily_sleep)
+glimpse(hourly_steps)
+```
+## 
+8 Combinamos los datasets de daily_activity con los de daily_sleep usando el ID y date como primary key, primero debemos nombrar las columnas con el mismo nombre "date".
+
+```{r}
+daily_activity <- daily_activity %>%
+  rename(date = activitydate)
+
+daily_sleep <- daily_sleep %>%
+  rename(date = sleepday)
+
+daily_activity_sleep <- merge(daily_activity, daily_sleep, by=c ("id", "date"))
+
+glimpse(daily_activity_sleep)
+```
+## ● 4° ANALIZAR (Analyze)
+Vamos a analizar las tendencias y relaciones de los usuarios de FitBit, con el objetivo de hacer una estrategia de marketing utilizable para los stackeholders de BellaBeat.
+Primero vamos a utilizar la funcion SUM() para realizar estadisticas de cada datasets 
+
+```{r}
+daily_activity %>%
+  select(totalsteps,
+  totaldistance,
+  sedentaryminutes, 
+  calories) %>%
+  summary()
+
+daily_intensities %>%
+  select(veryactiveminutes,
+  fairlyactiveminutes, 
+  lightlyactiveminutes,    
+  sedentaryminutes) %>%
+  summary()
+
+daily_calories %>%
+  select(calories) %>%
+  summary()
+
+daily_sleep %>%
+  select(totalsleeprecords, 
+  totalminutesasleep, 
+  totaltimeinbed) %>%
+  summary()
+
+```
+##
+La funcion summary() nos revela lo siguiente:
+
+●El promedio de pasos totales (7638 totalsteps),La OMS asegura que para estar saludable tenemos que hacer entre 7.000 y 8.000 pasos al día. Esta informacion nos dice que el promedio de usuarios esta dentro de los parametros "normales", pero podemos enfocar una estrategia de marketing que insite a lograr mas pasos.
+●El tiempo medio de sedentarismo es muy alto (16,52 horas) algo que debemos enfocarnos en la estrategia de marketing.
+●Actividad fisica activa (veryactiveminutes) es de 21.16mins, y activadad moderada (fairlyactiveminutes) 13.56mins. No alcanza los 30 mins de actividad fisica en rendimiento medio o alto recomendada.
+●Según las recomendaciones de la OMS, el consumo calórico para un adulto sano es de 2000 a 2500 kcal/día para un hombre y de 1500 a 2000 kcal/día. Las calorias quemadas son en promedio 2304, lo que nos dice que el consumo y el gasto de calorias estan en valores promedios y saludables.
+●El promedio de minutos dormidos (totalminutessleep) 419.2 mins (6.98hs) esta un poco por debajo de los recomendado por la OMS que es de 7 a 8 horas en adultos
+
+##● 5 COMPARTIR Y VISUALIZAR (Share and act phase)
+
+1er Gráfico:
+Queremos saber que tipo de uso le dan los usuarios al dispositivo. Para eso vamos a fraccionar a los usuarios en 3 grupos según el uso del dispositivo: "bajo", "moderado", "alto"
+
+```{r}
+daily_use <- daily_activity_sleep %>%
+  group_by(id) %>%
+  summarize(days_used=sum(n())) %>%
+  mutate(usage = case_when(
+    days_used >= 1 & days_used <= 10 ~ "bajo",
+    days_used >= 11 & days_used <= 20 ~ "moderado", 
+    days_used >= 21 & days_used <= 31 ~ "alto", 
+  ))
+  
+head(daily_use)
+```
+
+```{r}
+daily_use_percent <- daily_use %>%
+  group_by(usage) %>%
+  summarise(total = n()) %>%
+  mutate(totals = sum(total)) %>%
+  group_by(usage) %>%
+  summarise(total_percent = total / totals) %>%
+  mutate(labels = scales::percent(total_percent))
+
+daily_use_percent$usage <- factor(daily_use_percent$usage, levels = c("alto", "moderado", "bajo"))
+
+head(daily_use_percent)
+```
+```{r}
+daily_use_percent %>%
+  ggplot(aes(x="",y=total_percent, fill=usage)) +
+  geom_bar(stat = "identity", width = 1)+
+  coord_polar("y", start=0)+
+  theme_minimal()+
+  theme(axis.title.x= element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(), 
+        panel.grid = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=14, face = "bold")) +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5))+
+  scale_fill_manual(values = c("green","yellow","red"),
+                    labels = c("Alto - 21 to 31 dias",
+                                 "Moderado - 11 to 20 dias",
+                                 "Bajo - 1 to 10 dias"))+
+  labs(title="Uso diario del dispositivo")
+```
+## 
+2do Gráfico:
+Tipos de usuario segun su actividad. Vamos a usar la informacion del data set daily_activity_sleep para hacer las estadisticas del promedio de pasos de cada usuarios y luego dividirlos en 4 grupos segun su nivel de pasos.
+
+```{r}
+daily_average <- daily_activity_sleep %>%
+  group_by(id) %>%
+  summarise (mean_daily_steps = mean(totalsteps))
+
+head(daily_average)
+
+```
+
+```{r}
+user_type <- daily_average %>%
+  mutate(user_type = case_when(
+    mean_daily_steps < 5000 ~ "sedentario",
+    mean_daily_steps >= 5000 & mean_daily_steps < 7499 ~ "poco activo", 
+    mean_daily_steps >= 7500 & mean_daily_steps < 9999 ~ "activo", 
+    mean_daily_steps >= 10000 ~ "muy activo"
+  ))
+
+head(user_type)
+
+```
+```{r}
+user_type_percent <- user_type %>%
+  group_by(user_type) %>%
+  summarise(total = n()) %>%
+  mutate(totals = sum(total)) %>%
+  group_by(user_type) %>%
+  summarise(total_percent = total / totals) %>%
+  mutate(labels = scales::percent(total_percent))
+
+user_type_percent$user_type <- factor(user_type_percent$user_type , levels = c("muy activo", "activo", "poco activo", "sedentario"))
+
+
+head(user_type_percent)
+
+```
+
+```{r}
+user_type_percent %>%
+  ggplot(aes(x="",y=total_percent, fill=user_type)) +
+  geom_bar(stat = "identity", width = 1)+
+  coord_polar("y", start=0)+
+  theme_minimal()+
+  theme(axis.title.x= element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(), 
+        panel.grid = element_blank(), 
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, size=14, face = "bold")) +
+  scale_fill_manual(values = c("#85e085","#e6e600", "#ffd480", "#ff8080")) +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5))+
+  labs(title="Tipos de usuarios según su actividad")
+
+```
+
+3er Grafico:
+Queremos saber en que horarios del dia los usuarios son mas activos.
+
+```{r}
+hourly_steps <- hourly_steps %>%
+  separate(activityhour, into = c("date", "time"), sep= " ") %>%
+  mutate(date = ymd(date)) 
+  
+head(hourly_steps)
+
+```
+
+```{r}
+hourly_steps %>%
+  group_by(time) %>%
+  summarize(average_steps = mean(steptotal)) %>%
+  ggplot() +
+  geom_col(mapping = aes(x=time, y = average_steps, fill = average_steps)) + 
+  labs(title = "Promedio de pasos a lo largo del dia", x="", y="") + 
+  scale_fill_gradient(low = "green", high = "red")+
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+## 
+4to Gráfico:
+Relación entre los pasos totales y las calorias.
+
+```{r}
+ggplot(data=daily_activity, aes(x=totalsteps, y=calories)) +
+geom_point() + geom_smooth() + labs(title="Pasos totales vs. Calorias")
+
+```
+
+5to Grafico:
+Pasos totales y tiempo se sueño segun el dia de la semana 
+Queremos saber que dia de la semana los usuarios son mas activos en su conteo de pasos y que dias son descansan mas tiempo. Vamos a marcar en el grafico la cantidad optima de pasos y minutos de sueño requerida para un adulto.
+
+```{r}
+weekday_steps_sleep <- daily_activity_sleep %>%
+  mutate(weekday = weekdays(date))
+
+weekday_steps_sleep$weekday <-ordered(weekday_steps_sleep$weekday, levels=c("lunes", "martes", "miércoles", "jueves",
+"viernes", "sábado", "domingo"))
+
+ weekday_steps_sleep <-weekday_steps_sleep%>%
+  group_by(weekday) %>%
+  summarize (daily_steps = mean(totalsteps), daily_sleep = mean(totalminutesasleep))
+
+head(weekday_steps_sleep)
+
+```
+
+```{r}
+ggarrange(
+    ggplot(weekday_steps_sleep) +
+      geom_col(aes(weekday, daily_steps), fill = "#006699") +
+      geom_hline(yintercept = 7500) +
+      labs(title = "Pasos por dia", x= "", y = "") +
+      theme(axis.text.x = element_text(angle = 45,vjust = 0.5, hjust = 1)),
+    ggplot(weekday_steps_sleep, aes(weekday, daily_sleep)) +
+      geom_col(fill = "#85e0e0") +
+      geom_hline(yintercept = 480) +
+      labs(title = "Minutos de sueño por dia", x= "", y = "") +
+      theme(axis.text.x = element_text(angle = 45,vjust = 0.5, hjust = 1))
+  )
+
+```
+##● ACTUAR (Act phase)
+
+● TENDENCIAS:
+
+1. El uso del dispositivo por parte de los usuarios es bajo, el 50% de los usuarios utilizan    el dispositivo entre 21 y 31 dias al mes, lo cual es un uso alto y adecuado. Un 12% de      los usuarios usan el dispositivo entre 11 a 20 dias al mes, es un uso moderado, la          informacion que nos dan estos usuarios es poca y es dificil hacer analisis. Por ultimo un    38% de los usuarios utilizan el dispositivo entre 1 a 10 dias al mes. Es un uso bajo y la    informacion aportada por estos usuarios es muy escasa.
+2. Despues de analizar la informacion de la actividad fisica medida en pasos separamos a los    usuarios según su actividad diaria. El 21% de los usuarios son muy activos con mas de       10.000 pasos diarios, el 38% de los usarios son activos con 7.500 a 9.999 pasos diarios,    un 21% de los usuarios son poco activos con 5.000 a 7.499 pasos diarios. Y por utlimo el    21% de los usuarios restantes son sedentarios con 4.999 pasos o menos.
+3. El promedio de pasos a lo largo del dia muestra que los usuarios realizan más pasos entre    11:30am a 14:30pm y de 16:30pm a 19:30pm. Lo cual coincide con los horarios laborales       del almuerzo y la salida del trabajo.
+   Lo que nos da a entender que los usuarios del dispositivo tienen horarios laborales de 8    a 18hs.
+4. La relación entre los pasos totales y las colorias quemadas es correlativa. Cuanto mas      activo el usuario mas calorias se queman. 
+5. El grafico de "pasos por dia" nos muestra que de lunes a sabados se logra la meta de mas    de 7500 pasos diarios, los sabados son los dias con mas pasos seguidos de los lunes y       martes. Por ultimo el dia con menos pasos de la semana es el domingo.
+   El gráfico de "minutos de sueño por dia" nos muestra que los usuarios no estan alcanzando    los minutos de sueño recomendado de al menos 480 minutos (8 horas diarias). Los martes y    los jueves son especialmente de pocos minutos de sueño.
+
+● CONCLUSIONES Y RECOMENDACIONES.
+
+El publico objetivo a enfocar la estrategia de marketing debe ser: Adultos con trabajos de 9am a 18pm que debido a la rutina laboral no tienen mucho tiempo para tener rutinas de ejercicios diarios. Personas interesadas en mejorar su salud y habitos diarios. 
+BellaBeat debe empoderar a los usuarios a entender el dispositivo como una herramienta de salud, la importancia de usar el dispositivo todos los dias, con la intencion de generar registros mas precisos y constantes del usuario, de esta manera que el usuario tenga la informacion de su salud y habitos diarios.
+En la app del dispositivo, es importante tener el seguimiento del sueño. Recomendando al menos 8 horas diarias de sueño, y si pasan las 3 noches sin dormir suficiente generar una alerta que notifique al usuario que debe descansar y reponer energias.
+Tambien en la app generar reconocimientos o recompensas al lograr los pasos diarios, y promover al usuario a lograr una proxima meta con mas pasos.
+Seria muy recomendable que la misma app genere graficos que se relacionen con los pasos diarios dados y las calorias quemadas. Tabien graficos  de barras semanalas del control del sueño. Estadisticas de los dias de la semana mas activos, y los horarios del dia mas activos.
+Un recurso que se  podria programar en la app. es generar un recordatorio diario de actividad fisica, al menos 30mins diarios de actividad fisica. Con el tiempo lograr rutinas y hábitos saludables. Programar un horario diario que el usuario este disponible para hacer una rutina de actividad fisica a eleccion.
+Generar avisos de hidratacion cada 40 mins.
+Generando contenido con la app. logramos que el usuario vea en forma grafica que su esfuerzo diario, genera logros al largo plazo. De esta manera ellos utilizan mas el dispositivo, ésto genera mas informacion útil. Asi logramos la conexion usuario/dispotivo.
+
+
+
